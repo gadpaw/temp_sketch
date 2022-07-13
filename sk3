@@ -1,0 +1,86 @@
+//runs on arduinos based on ATMEGA 32u4
+
+#include <Mouse.h>
+boolean buttonPressed = 0;
+boolean sample = 0;
+volatile boolean trigger1 = 0;
+boolean movedRight = 0;
+// Define various ADC prescalers
+const unsigned char PS_16 = (1 << ADPS2);
+const unsigned char PS_32 = (1 << ADPS2) | (1 << ADPS0);
+const unsigned char PS_64 = (1 << ADPS2) | (1 << ADPS1);
+const unsigned char PS_128 = (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
+
+int sensorValue = 0;
+int sensorPrevious = 0;
+long a = 0;
+long b = 0;
+long c = 0;
+volatile long d = 0;
+void setup() {
+  ADCSRA &= ~PS_128;  // remove bits set by Arduino library
+  ADCSRA |= PS_16;    // set prescaler to 16,
+  pinMode(3, INPUT_PULLUP);//Connect to switch's normally open contact
+  pinMode(4, INPUT_PULLUP);//Connect to switch's normally closed contact
+  pinMode(5, OUTPUT);//LED
+  pinMode(7, INPUT);//From output of opamp/comparator
+  pinMode(A0, INPUT);//From non-inverting input of opamp/comparator
+  Serial.begin(9600);
+  Mouse.begin();
+  randomSeed(analogRead(A0));
+  attachInterrupt(digitalPinToInterrupt(7),trigger, RISING ) ;
+}
+
+void trigger(){
+  trigger1 = 1;
+  d = micros();
+}
+
+void loop() {
+  if (digitalRead(4) == LOW) {
+    buttonPressed = 0;
+  }
+  if (digitalRead(3) == LOW && buttonPressed == 0) {
+    buttonPressed = 1;
+    sample = !(sample);
+    trigger1=0;
+    if (movedRight){
+      movedRight=0;
+      digitalWrite(5, LOW);
+      Mouse.move(-1, 127, 0);
+    }
+    Serial.println("-------------------------------Break in data-------------------------------");
+  }
+  if (sample) {
+    if ( trigger1  && movedRight) {
+      c=d;
+      sensorValue = analogRead (A0);
+      Mouse.move(-1, 127, 0);
+      digitalWrite(5, LOW);
+      movedRight = 0;
+      Serial.print (c - a); //PC under test delay (subtracts out USB poll interval)
+      Serial.print (",");
+      Serial.print (c - b); //combined end to end delay
+      Serial.print (",");
+      Serial.println (sensorValue);
+      trigger1=0;
+    } else {
+      if ((c - a) > 1000000 && movedRight) {
+        Serial.print ("No trigger, Sensor value: ");
+        sensorValue = analogRead (A0);
+        Serial.println (sensorValue);
+        delay(100);
+      }
+      if (movedRight == 0) {
+        movedRight = 1;
+        delay(100); // Delay to allow for phosphor decay, pipeline clearing, etc. Helps prevent false positives
+        delayMicroseconds(random(1, 200000)); //get rid of refresh rate correlation, this can be changed to 1,000,000/refreshrate. 
+        delayMicroseconds(random(1, 1000)); //get rid of usb poll correlation
+        Mouse.move(1, -127, 0);//mouse.move takes approx 40 microseconds.
+        b = micros(); 
+        while (a < b) a = lastTX; // requires modification of USB ISR in USBCore.cpp
+        digitalWrite(5, HIGH);
+      }
+    }
+  }
+}
