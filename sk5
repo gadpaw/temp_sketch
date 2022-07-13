@@ -1,0 +1,81 @@
+
+ // Mouse - Version: Latest
+#include <Mouse.h>
+
+// light sensor pin
+const byte lightSensorPin = 11;
+// the number of the pushbutton pin
+const byte buttonPin = 2;
+
+// used in tests to get time when test starts
+unsigned long startTime;
+// used in tests to get time when sensor responded to pixel changes
+unsigned long endTime;
+
+// variable for reading the pushbutton state
+bool buttonState = 0;
+
+// variable for reading the light sensor state
+bool newLightSensorState = 0;
+// variable for storing previous state of light sensor
+bool oldLightSensorState = 0;
+
+void setup() {
+  
+  // initialize serial communication at 9600 bits per second:
+  Serial.begin(9600);
+  // initialize mouse
+  Mouse.begin();
+  
+  // initialize the pushbutton pin as an input:
+  pinMode(buttonPin, INPUT_PULLUP);
+  // initialize light sensor pin as an input
+  pinMode(lightSensorPin, INPUT);
+  // initialize the LED pin as an output:
+  pinMode(LED_BUILTIN, OUTPUT);
+}
+
+void loop() {
+  // read the state of the pushbutton value:
+  int buttonState = digitalRead(buttonPin);
+
+  // check if the button is pressed. If it is, the buttonState is LOW:
+  if (buttonState == LOW) {
+    // turn LED on:
+    digitalWrite(LED_BUILTIN, HIGH);
+    
+    oldLightSensorState = newLightSensorState; // store previous state of light sensor
+    newLightSensorState = digitalRead(lightSensorPin); // get new state of light sensor
+    
+    
+    //Serial.println(newLightSensorState);
+    Mouse.press();
+    startTime = micros();
+    delay(0);                  //better i think delayMicroseconds(3); delayMicroseconds(1);   - delay need for good calc arduino or exists error (it is me comments!!!)
+    // wait until sensor's state is changed
+    while(newLightSensorState == 1 && buttonState == LOW)
+    {
+      oldLightSensorState = newLightSensorState; // store previous state of light sensor
+      newLightSensorState = digitalRead(lightSensorPin); // get new state of light sensor
+      buttonState = digitalRead(buttonPin);
+      delay(0);
+    }
+    
+    endTime = micros();
+    Mouse.release();
+    
+    float responseTime = (endTime - startTime)/1000.0;
+    Serial.print("startTime: ");
+    Serial.print(startTime);
+    Serial.print(", ");
+    Serial.print("endTime: ");
+    Serial.print(endTime);
+    Serial.print(", ");
+    Serial.print("responseTime: ");
+    Serial.println(responseTime);
+    delay(200); //better 400-600 random ? (it is me comments!!!)
+  } else {
+    // turn LED off:
+    digitalWrite(LED_BUILTIN, LOW);
+  }
+}
