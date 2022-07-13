@@ -1,0 +1,22 @@
+
+while (digitalRead(hold) == LOW && digitalRead(reset) == HIGH) 
+  {
+    	float photodiode_state = analogRead(photodiode);
+    	float photodiode_low_barrier = (photodiode_state*0.9);
+   	float photodiode_high_barrier = (photodiode_state*1.1);
+    
+   	Mouse.click();
+    	startTime = micros();
+    	delayMicroseconds(1);
+    
+    	while( photodiode_low_barrier < photodiode_state && photodiode_state < photodiode_high_barrier && digitalRead(hold) == LOW)
+    	{
+     	 photodiode_state = analogRead(photodiode);
+    	}    
+    	endTime = micros();
+   	responseTime = (endTime - startTime)/1000.0;
+   	
+   	delay(random(400, 600));
+  }
+  
+  
