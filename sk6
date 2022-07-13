@@ -1,0 +1,96 @@
+int buttonPin = 3;
+int photoResistorPin = A0;
+
+float sumResponseTime = 0;
+float minResponseTime = 10000;
+float maxResponseTime = 0;
+int countOfGetResponseTime = 0;
+
+unsigned long startTime;
+unsigned long endTime;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(buttonPin, INPUT_PULLUP);
+  pinMode(photoResistorPin, INPUT);
+}
+
+void loop() {
+  int buttonState = digitalRead(buttonPin);
+  //int countOfTryReadAnalogSignal = 0;
+  
+  float photoResistorStartState;
+  
+  if (buttonState == LOW) 
+  {
+    float photoResistorState = analogRead(photoResistorPin);
+    photoResistorStartState = photoResistorState;
+    float photoResistorLowBarrier = (photoResistorState * 0.9); //10% GtG
+    float photoResistorHighBarrier = (photoResistorState * 1.1); //10% GtG
+
+    startTime = micros();
+    delayMicroseconds(1); //without this command -> broken data
+
+    while(photoResistorLowBarrier < photoResistorState && 
+          photoResistorState < photoResistorHighBarrier 
+          && digitalRead(buttonPin) == LOW)
+    {
+       photoResistorState = analogRead(photoResistorPin);
+       
+       //countOfTryReadAnalogSignal += 1;
+    }
+
+    endTime = micros();
+
+    float responseTimeMicroSeconds = endTime - startTime;
+    float responseTime = responseTimeMicroSeconds / 1000.0;
+
+    countOfGetResponseTime++;
+
+    if (countOfGetResponseTime > 0)
+      sumResponseTime += responseTime;
+
+    if (responseTime > maxResponseTime)
+      maxResponseTime = responseTime;
+
+    if (responseTime < minResponseTime)
+      minResponseTime = responseTime;
+
+    Serial.println("");
+    Serial.println("");
+    Serial.println("-----------##########################-----------");
+    Serial.print("response time (ms): ");
+    Serial.println(responseTime);
+    Serial.print("response time (µs): ");
+    Serial.println(responseTimeMicroSeconds);
+    Serial.println("------------------------------------------------");
+    Serial.print("avg response time (ms): ");
+    Serial.println(sumResponseTime / countOfGetResponseTime);
+    Serial.print("min response time (ms): ");
+    Serial.println(minResponseTime);
+    Serial.print("max response time (ms): ");
+    Serial.println(maxResponseTime);
+    Serial.print("count of measurements: ");
+    Serial.println(countOfGetResponseTime);
+    
+    Serial.println("------------------------------------------------");
+
+    Serial.print("photoresistor start state: ");
+    Serial.println(photoResistorStartState);
+    Serial.print("photoresistor end state: ");
+    Serial.println(photoResistorState);
+    Serial.println("------------------------------------------------");
+    Serial.print("photoresistor low barrier: ");
+    Serial.println(photoResistorLowBarrier);
+    Serial.print("photoresistor high barrier: ");
+    Serial.println(photoResistorHighBarrier);
+    
+    //Serial.print("count of time try to read analog signal: ");
+    //Serial.println(countOfTryReadAnalogSignal);
+    Serial.println("------------------------------------------------");
+    Serial.println("------------------------------------------------");
+
+    delay(300); //if arduino leonardo and mouse.click() -> random(400, 600)
+  }
+  
+}
