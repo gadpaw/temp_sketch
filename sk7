@@ -1,0 +1,47 @@
+int photoResistorPin = A0;
+
+unsigned long startTime;
+unsigned long endTime;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(photoResistorPin, INPUT);
+}
+
+void loop() {
+  float photoResistorStartState;
+  
+  digitalWrite(LED_BUILTIN, LOW);
+  delay(2000);
+
+  digitalWrite(LED_BUILTIN, HIGH);
+  startTime = micros();
+  delayMicroseconds(1);
+  
+  float photoResistorState = analogRead(photoResistorPin);
+  photoResistorStartState = photoResistorState;
+  float photoResistorLowBarrier = (photoResistorState * 0.9); //10% GtG
+  float photoResistorHighBarrier = (photoResistorState * 1.1); //10% GtG
+
+  while(photoResistorLowBarrier < photoResistorState && 
+          photoResistorState < photoResistorHighBarrier)
+  {
+     photoResistorState = analogRead(photoResistorPin);
+  }
+
+  endTime = micros();
+
+  float responseTimeMicroSeconds = endTime - startTime;
+  float responseTime = responseTimeMicroSeconds / 1000.0;
+  Serial.println("");
+  Serial.println("");
+  Serial.println("-----------##########################-----------");
+  Serial.print("responseTime (µs): ");
+  Serial.println(responseTimeMicroSeconds);
+  Serial.print("responseTime (ms): ");
+  Serial.println(responseTime);
+  Serial.println("------------------------------------------------");
+
+  delay(random(1000, 1500));
+}
